@@ -4,7 +4,77 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>HoloArchive - Translated VOD Player</title>
-  <link rel="stylesheet" href="style.css">
+  <style>
+    body {
+      background-color: #0f172a;
+      color: #f8fafc;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      margin: 0;
+      padding: 20px;
+    }
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+    }
+    header h1 {
+      color: #38bdf8;
+      margin-bottom: 5px;
+    }
+    .video-container {
+      position: relative;
+      width: 100%;
+      padding-top: 56.25%; /* 16:9 Aspect Ratio */
+      background: #000;
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
+    }
+    iframe {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      border: 0;
+    }
+    .subtitles {
+      position: absolute;
+      bottom: 12%;
+      left: 5%;
+      right: 5%;
+      text-align: center;
+      color: #ffffff;
+      font-size: 24px;
+      font-weight: 700;
+      line-height: 1.4;
+      text-shadow: 
+        -2px -2px 0 #000,  
+         2px -2px 0 #000,
+        -2px  2px 0 #000,
+         2px  2px 0 #000,
+         0px  3px 5px rgba(0,0,0,0.8);
+      pointer-events: none; 
+      white-space: pre-line;
+    }
+    .video-controls {
+      margin-top: 20px;
+      background: #1e293b;
+      padding: 15px;
+      border-radius: 8px;
+    }
+    button {
+      background: #38bdf8;
+      color: #0f172a;
+      border: none;
+      padding: 10px 20px;
+      font-weight: bold;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    button:hover {
+      background: #0ea5e9;
+    }
+  </style>
 </head>
 <body>
 
@@ -14,18 +84,113 @@
       <p>Watch full Hololive streams with accurate English subtitles.</p>
     </header>
 
-    <!-- The Player Container -->
     <div class="video-container">
-      <div id="player"></div>
+      <!-- Direct native iframe bypasses browser and cross-origin video restrictions -->
+      <iframe id="main-player" src="https://youtube.com" allow="autoplay; encrypted-media" allowfullscreen></iframe>
       <div id="subtitle-overlay" class="subtitles"></div>
     </div>
 
-<section class="video-controls">
-  <h3>**Select a Translation Test**</h3>
-  <button onclick="loadVideo('WM0XE6Susds', 'subtitles/test.vtt')">Load Ririka VOD</button>
-</section>
+    <section class="video-controls">
+      <h3>**Select a Translation Test**</h3>
+      <button onclick="changeVideo('WM0XE6Susds', 'subtitles/test.vtt')">Load Ririka VOD</button>
+    </section>
+  </main>
 
+  <script>
+    let subtitleCueList = [];
+    let subtitleInterval;
+    let iframeElement = document.getElementById('main-player');
 
-  <script src="script.js"></script>
+    // Load initial subtitles instantly on startup
+    fetchSubtitles('subtitles/test.vtt');
+
+    function changeVideo(videoId, vttUrl) {
+      iframeElement.src = `https://youtube.com{videoId}?enablejsapi=1&rel=0&autoplay=1`;
+      fetchSubtitles(vttUrl);
+    }
+
+    async function fetchSubtitles(url) {
+      try {
+        const response = await fetch(url);
+        const text = await response.text();
+        subtitleCueList = parseVTT(text);
+        
+        // Start rendering loops immediately
+        clearInterval(subtitleInterval);
+        subtitleInterval = setInterval(syncSubtitlesWithPostMessage, 100);
+      } catch (error) {
+        console.error("Subtitles failed to load:", error);
+      }
+    }
+
+    function parseVTT(vttText) {
+      const cues = [];
+      const cleanText = vttText.replace(/^\uFEFF/, ''); 
+      const blocks = cleanText.trim().split(/\r?\n\r?\n/);
+      const startIdx = blocks[0].toUpperCase().startsWith('WEBVTT') ? 1 : 0;
+
+      for (let i = startIdx; i < blocks.length; i++) {
+        const lines = blocks[i].trim().split('\n');
+        if (lines.length >= 2) {
+          let timeLine = lines[0];
+          let textIndex = 1;
+
+          if (!timeLine.includes('-->') && lines[1] && lines[1].includes('-->')) {
+            timeLine = lines[1];
+            textIndex = 2;
+          }
+
+          if (timeLine.includes('-->')) {
+            const [startStr, endStr] = timeLine.split('-->');
+            const textStr = lines.slice(textIndex).join('\n');
+            cues.push({
+              start: parseVttTime(startStr.trim()),
+              end: parseVttTime(endStr.trim()),
+              text: textStr
+            });
+          }
+        }
+      }
+      return cues;
+    }
+
+    function parseVttTime(timeStr) {
+      const parts = timeStr.split(':');
+      let hrs = 0, mins = 0, secs = 0;
+      if (parts.length === 3) {
+        hrs = parseFloat(parts[0]);
+        mins = parseFloat(parts[1]);
+        secs = parseFloat(parts[2]);
+      } else {
+        mins = parseFloat(parts[0]);
+        secs = parseFloat(parts[1]);
+      }
+      return (hrs * 3600) + (mins * 60) + secs;
+    }
+
+    // Direct YouTube Player interface bridge query logic
+    window.addEventListener('message', function(event) {
+      if (event.origin !== "https://youtube.com") return;
+      try {
+        const data = JSON.parse(event.data);
+        if (data.event === "infoDelivery" && data.info && typeof data.info.currentTime !== 'undefined') {
+          const currentTime = data.info.currentTime;
+          const subOverlay = document.getElementById('subtitle-overlay');
+          const activeCue = subtitleCueList.find(cue => currentTime >= cue.start && currentTime <= cue.end);
+          subOverlay.innerText = activeCue ? activeCue.text : "";
+        }
+      } catch (e) {}
+    });
+
+    function syncSubtitlesWithPostMessage() {
+      // Forcefully commands the YouTube video to broadcast its active playback timestamps to our script
+      if(iframeElement && iframeElement.contentWindow) {
+        iframeElement.contentWindow.postMessage(JSON.stringify({
+          "event": "listening",
+          "id": 1
+        }), "*");
+      }
+    }
+  </script>
 </body>
 </html>
