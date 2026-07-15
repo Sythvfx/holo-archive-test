@@ -1,0 +1,77 @@
+body {
+  background-color: #0f172a;
+  color: #f8fafc;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  margin: 0;
+  padding: 20px;
+}
+
+.container {
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+header h1 {
+  color: #38bdf8;
+  margin-bottom: 5px;
+}
+
+.video-container {
+  position: relative;
+  width: 100%;
+  padding-top: 56.25%; /* 16:9 Aspect Ratio */
+  background: #000;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
+}
+
+#player {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.subtitles {
+  position: absolute;
+  bottom: 12%;
+  left: 5%;
+  right: 5%;
+  text-align: center;
+  color: #ffffff;
+  font-size: 24px;
+  font-weight: 700;
+  line-height: 1.4;
+  text-shadow: 
+    -2px -2px 0 #000,  
+     2px -2px 0 #000,
+    -2px  2px 0 #000,
+     2px  2px 0 #000,
+     0px  3px 5px rgba(0,0,0,0.8);
+  pointer-events: none; /* Allows clicking through subtitles to control video */
+  white-space: pre-line;
+  transition: opacity 0.1s ease;
+}
+
+.video-controls {
+  margin-top: 20px;
+  background: #1e293b;
+  padding: 15px;
+  border-radius: 8px;
+}
+
+button {
+  background: #38bdf8;
+  color: #0f172a;
+  border: none;
+  padding: 10px 20px;
+  font-weight: bold;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+button:hover {
+  background: #0ea5e9;
+}

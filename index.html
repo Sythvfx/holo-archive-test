@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HoloArchive - Translated VOD Player</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <main class="container">
+    <header>
+      <h1>**HoloArchive**</h1>
+      <p>Watch full Hololive streams with accurate English subtitles.</p>
+    </header>
+
+    <!-- The Player Container -->
+    <div class="video-container">
+      <div id="player"></div>
+      <div id="subtitle-overlay" class="subtitles"></div>
+    </div>
+
+<section class="video-controls">
+  <h3>**Select a Translation Test**</h3>
+  <button onclick="loadVideo('WM0XE6Susds', 'subtitles/test.vtt')">Load Ririka VOD</button>
+</section>
+
+
+  <script src="script.js"></script>
+</body>
+</html>
